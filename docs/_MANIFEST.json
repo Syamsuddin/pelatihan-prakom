@@ -1,0 +1,503 @@
+{
+  "app": {
+    "name": "MyCORPU",
+    "description": "Sistem manajemen aktivitas pembelajaran (pelatihan) multi-angkatan: jadwal berbasis JP, presensi per sesi, materi & tugas, pre/post-test, sertifikat ber-QR, laporan",
+    "type": "greenfield"
+  },
+  "confirmed_at": "2026-10-25T13:00:00+08:00",
+  "requirements": {
+    "goal": "Mengelola siklus pelatihan dari jadwal sampai sertifikat dalam satu aplikasi, menggantikan rekap Excel manual",
+    "success_metric": "Sertifikat + laporan akhir terbit <= 1 hari kerja setelah pelatihan ditutup",
+    "features": [
+      {
+        "name": "Kelola pelatihan/angkatan (menit per JP, ambang lulus)",
+        "priority": "mvp"
+      },
+      {
+        "name": "Impor peserta dari Excel",
+        "priority": "mvp"
+      },
+      {
+        "name": "Materi (total JP) -> sesi terjadwal + penugasan narasumber",
+        "priority": "mvp"
+      },
+      {
+        "name": "Presensi per sesi diinput admin/narasumber",
+        "priority": "mvp"
+      },
+      {
+        "name": "Bahan ajar unggah/unduh",
+        "priority": "mvp"
+      },
+      {
+        "name": "Tugas: unggah jawaban + nilai 0-100",
+        "priority": "mvp"
+      },
+      {
+        "name": "Pre/post-test PG per pelatihan",
+        "priority": "mvp"
+      },
+      {
+        "name": "Penutupan pelatihan -> kelulusan -> sertifikat PDF + QR verifikasi",
+        "priority": "mvp"
+      },
+      {
+        "name": "Laporan Excel/PDF",
+        "priority": "mvp"
+      },
+      {
+        "name": "TTE BSrE",
+        "priority": "later"
+      },
+      {
+        "name": "Notifikasi email/WA",
+        "priority": "later"
+      },
+      {
+        "name": "Evaluasi penyelenggaraan (kuesioner)",
+        "priority": "later"
+      },
+      {
+        "name": "Dasbor lintas tahun",
+        "priority": "later"
+      }
+    ],
+    "out_of_scope": [
+      "Integrasi SIASN/LMS LAN",
+      "Video conference/streaming",
+      "Presensi QR/geolokasi",
+      "Aplikasi mobile native",
+      "Pendaftaran mandiri peserta",
+      "Multi-bahasa"
+    ],
+    "roles": [
+      {
+        "name": "admin",
+        "can": [
+          "kelola semua pelatihan",
+          "impor peserta",
+          "kelola materi/sesi/narasumber",
+          "presensi semua sesi",
+          "kelola bank soal & jendela tes",
+          "tutup pelatihan",
+          "terbitkan/cabut sertifikat",
+          "laporan"
+        ],
+        "cannot": []
+      },
+      {
+        "name": "narasumber",
+        "can": [
+          "unggah bahan materi yang ditugaskan",
+          "buat tugas & menilai pada materinya",
+          "presensi sesi materinya"
+        ],
+        "cannot": [
+          "akses materi/pelatihan lain",
+          "tutup pelatihan",
+          "kelola peserta",
+          "sertifikat"
+        ]
+      },
+      {
+        "name": "peserta",
+        "can": [
+          "lihat jadwal pelatihan yang diikuti",
+          "unduh bahan",
+          "kumpulkan tugas",
+          "kerjakan pre/post-test",
+          "unduh sertifikat sendiri"
+        ],
+        "cannot": [
+          "lihat data peserta lain",
+          "mengubah presensi",
+          "akses pelatihan yang tidak diikuti"
+        ]
+      }
+    ],
+    "processes": [
+      {
+        "name": "Siklus pelatihan",
+        "happy_path": "buat pelatihan -> impor peserta -> materi & sesi -> jalankan (presensi, tugas, tes) -> tutup -> sertifikat",
+        "failure": "NIP duplikat/tidak valid di Excel; total JP sesi != JP materi; peserta belum post-test saat tutup -> TIDAK LULUS"
+      }
+    ],
+    "pass_rule": "kehadiran >= 80% dari JP (status hadir) DAN post-test >= 70; ambang per pelatihan; tugas tidak menentukan kelulusan",
+    "entities": [
+      {
+        "name": "User",
+        "key_attrs": [
+          "nip",
+          "name",
+          "role",
+          "must_change_password"
+        ],
+        "relations": [
+          "hasMany Enrollment"
+        ]
+      },
+      {
+        "name": "Training",
+        "key_attrs": [
+          "title",
+          "batch",
+          "start_date",
+          "end_date",
+          "minutes_per_jp",
+          "min_attendance_pct",
+          "min_posttest_score",
+          "status"
+        ],
+        "relations": [
+          "hasMany Subject",
+          "hasMany Enrollment",
+          "hasMany Question"
+        ]
+      },
+      {
+        "name": "Enrollment",
+        "key_attrs": [
+          "training_id",
+          "user_id",
+          "result"
+        ],
+        "relations": [
+          "hasMany Attendance",
+          "hasMany TestAttempt",
+          "hasOne Certificate"
+        ]
+      },
+      {
+        "name": "Subject",
+        "key_attrs": [
+          "training_id",
+          "title",
+          "jp",
+          "speaker_id"
+        ],
+        "relations": [
+          "hasMany TrainingSession",
+          "hasMany MaterialFile",
+          "hasMany Assignment"
+        ]
+      },
+      {
+        "name": "TrainingSession",
+        "key_attrs": [
+          "subject_id",
+          "date",
+          "start_time",
+          "end_time",
+          "jp"
+        ],
+        "relations": [
+          "hasMany Attendance"
+        ]
+      },
+      {
+        "name": "Attendance",
+        "key_attrs": [
+          "training_session_id",
+          "enrollment_id",
+          "status"
+        ],
+        "relations": []
+      },
+      {
+        "name": "MaterialFile",
+        "key_attrs": [
+          "subject_id",
+          "path"
+        ],
+        "relations": []
+      },
+      {
+        "name": "Assignment",
+        "key_attrs": [
+          "subject_id",
+          "due_at"
+        ],
+        "relations": [
+          "hasMany Submission"
+        ]
+      },
+      {
+        "name": "Submission",
+        "key_attrs": [
+          "assignment_id",
+          "enrollment_id",
+          "path",
+          "score"
+        ],
+        "relations": []
+      },
+      {
+        "name": "Question",
+        "key_attrs": [
+          "training_id",
+          "body"
+        ],
+        "relations": [
+          "hasMany QuestionOption"
+        ]
+      },
+      {
+        "name": "TestAttempt",
+        "key_attrs": [
+          "enrollment_id",
+          "type(pre|post)",
+          "score"
+        ],
+        "relations": []
+      },
+      {
+        "name": "Certificate",
+        "key_attrs": [
+          "enrollment_id",
+          "number",
+          "verification_code",
+          "revoked_at"
+        ],
+        "relations": []
+      }
+    ],
+    "sensitive_data": [
+      "NIP (PII)",
+      "nama",
+      "no. HP",
+      "email",
+      "berkas tugas & bahan (disk privat)",
+      "password (hash)"
+    ],
+    "stack": {
+      "backend": "Laravel 12 / PHP 8.3",
+      "frontend": "Livewire 3 + Tailwind CSS 4 (Vite)",
+      "db": "MySQL 8",
+      "versions": {
+        "php": "8.3",
+        "laravel": "12",
+        "livewire": "3",
+        "tailwindcss": "4",
+        "mysql": "8.0",
+        "node": "22",
+        "pest": "3"
+      },
+      "libraries": [
+        "maatwebsite/excel",
+        "barryvdh/laravel-dompdf",
+        "simplesoftwareio/simple-qrcode"
+      ],
+      "forbidden": [
+        "jQuery",
+        "Bootstrap",
+        "React/Vue/Inertia/SPA",
+        "Filament/Nova/admin generator"
+      ],
+      "framework": {
+        "backend": "laravel",
+        "frontend": "livewire"
+      }
+    },
+    "ui": {
+      "enabled": true,
+      "anchor": "Tailwind CSS 4 + preset netral slate dengan satu aksen teal"
+    },
+    "split": {
+      "enabled": false,
+      "role": "",
+      "contract_path": "",
+      "contract_version": ""
+    },
+    "architecture": {
+      "pattern": "Monolit modular: Livewire component tipis -> app/Actions & app/Services; otorisasi via Policy; queue database untuk impor & sertifikat massal",
+      "integrations": []
+    },
+    "environment": {
+      "os": "Ubuntu 24.04 + Nginx + PHP-FPM 8.3 + MySQL 8 + Supervisor + cron",
+      "services": [
+        "mysql",
+        "queue (database)",
+        "scheduler"
+      ],
+      "commands": {
+        "run": "composer run dev",
+        "test": "php artisan test",
+        "migrate": "php artisan migrate",
+        "build": "npm run build",
+        "lint": "vendor/bin/pint --test"
+      }
+    },
+    "testing": "Pest feature test untuk alur kritikal (impor, presensi, kelulusan, penutupan, otorisasi per peran) + unit test logika kelulusan",
+    "security": [
+      "validasi semua input",
+      "rahasia di .env",
+      "Policy per peran",
+      "rate limit login",
+      "wajib ganti password saat login pertama",
+      "berkas di disk privat via route ber-otorisasi"
+    ],
+    "acceptance": "Given/When/Then per fitur + blok verifikasi Pest",
+    "definition_of_done": "kriteria 23 + php artisan test hijau + pint bersih + tanpa regresi + empat state UI",
+    "change_policy": {
+      "git": "branch per fitur, dilarang commit langsung ke main",
+      "irreversible_ops": [
+        "migrasi destruktif",
+        "hapus pelatihan/peserta",
+        "tutup pelatihan",
+        "cabut sertifikat",
+        "rilis produksi"
+      ],
+      "release_steps": [
+        "tes hijau",
+        "build aset",
+        "backup DB",
+        "migrate --force",
+        "restart queue",
+        "smoke test",
+        "rollback plan"
+      ]
+    }
+  },
+  "canonical_owners": {
+    "product_value": "00/01",
+    "features": "01",
+    "scope": "02",
+    "roadmap": "03",
+    "domain_terms": "04",
+    "roles": "05",
+    "business_process": "06",
+    "schema": "07",
+    "architecture": "08",
+    "stack": "09",
+    "dev_env": "10",
+    "commands": "11",
+    "project_structure": "12",
+    "testing": "13",
+    "error_handling": "14",
+    "observability": "15",
+    "landmines": "16",
+    "repair_rules": "18",
+    "guardrails": "20",
+    "security": "21",
+    "change_policy": "22",
+    "definition_of_done": "24",
+    "ui": "26"
+  },
+  "referenced_by": {
+    "01": [
+      "02",
+      "03",
+      "23"
+    ],
+    "02": [
+      "03",
+      "17",
+      "22",
+      "23",
+      "CLAUDE"
+    ],
+    "03": [],
+    "04": [
+      "06",
+      "07"
+    ],
+    "05": [
+      "06",
+      "21",
+      "23"
+    ],
+    "06": [
+      "23"
+    ],
+    "07": [
+      "06",
+      "16",
+      "18",
+      "21",
+      "23"
+    ],
+    "08": [],
+    "09": [
+      "08",
+      "10",
+      "CLAUDE"
+    ],
+    "10": [],
+    "11": [
+      "10",
+      "13",
+      "16",
+      "23",
+      "25",
+      "CLAUDE"
+    ],
+    "12": [
+      "CLAUDE"
+    ],
+    "13": [
+      "23",
+      "24"
+    ],
+    "14": [
+      "16"
+    ],
+    "15": [
+      "16"
+    ],
+    "16": [
+      "18"
+    ],
+    "18": [
+      "17"
+    ],
+    "20": [
+      "24",
+      "CLAUDE"
+    ],
+    "21": [
+      "06",
+      "20",
+      "22",
+      "23"
+    ],
+    "22": [
+      "25",
+      "CLAUDE"
+    ],
+    "24": [
+      "23",
+      "25"
+    ],
+    "26": [
+      "23",
+      "CLAUDE"
+    ]
+  },
+  "collapsed": [
+    "17",
+    "19"
+  ],
+  "landmines": [
+    "Batas unggah berlapis (Livewire 12MB default, PHP, Nginx)",
+    "NIP 18 digit rusak dibaca Excel sebagai float",
+    "Properti publik Livewire bisa dimanipulasi klien; is_correct jangan di properti publik",
+    "dompdf tanpa flex/grid, font lokal, gambar base64",
+    "Tabel sessions milik Laravel -> training_sessions",
+    "SQLite tes vs MySQL produksi",
+    "Kelas Tailwind dinamis tidak ter-generate",
+    "Nomor sertifikat ganda tanpa lockForUpdate"
+  ],
+  "assumptions": [
+    "1 user = 1 peran; peserta bisa ikut banyak pelatihan",
+    "Kolom Excel peserta: nip, nama, jabatan, pangkat_golongan, unit_kerja, email, no_hp; password awal = NIP, wajib diganti",
+    "Status presensi: hadir/izin/sakit/alpa; hanya hadir dihitung JP kehadiran",
+    "Pre/post-test hanya saat jendela dibuka admin; 1x percobaan; peningkatan = post - pre",
+    "Nomor sertifikat otomatis dengan pola per pelatihan; penandatangan diinput per pelatihan",
+    "Berkas maks 20 MB (pdf, docx, pptx, xlsx, zip), disk lokal privat",
+    "Zona waktu Asia/Makassar (WITA)"
+  ],
+  "open_questions": [
+    "Desain visual template sertifikat (latar/logo instansi) — menunggu aset pengguna",
+    "Data pelatihan pertama (peserta, JP, materi) — akan dikirim pengguna; masuk sebagai impor/seed, bukan blueprint"
+  ]
+}
